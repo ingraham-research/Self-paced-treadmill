@@ -1,0 +1,1 @@
+In these self-paced treadmill codes, I defined the coordinate system (mostly concerning the naming of variables) same as QTM. So, the walking direction is X. Because of this, the COP reported from the force plates are no longer in the right order by themselves (reported in plate local frame) and the code dealt with this by assigning variables to the right place.

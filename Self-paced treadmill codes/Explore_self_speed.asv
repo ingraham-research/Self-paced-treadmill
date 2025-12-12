@@ -1,0 +1,22 @@
+%This code incrementally increase the belt speeds to allow the participant to find out their preferred walking speed;
+%Orginal idea in Kinematic variability and local dynamic stability of upper body motions when walking at different speeds
+%I cited this from Habitual exercise evokes fast and persistent adaptation during split-belt walking
+
+ip = '127.0.0.1:22222';
+initial_tread_speed = 0.6;
+
+%%%%%Remote connection to Bertec Treadmill control panel%%%%%%%%%%%
+% Open the connection (do it only once at start of the control session)
+remote = tcpip('localhost', 4000);
+fclose(remote); %In case TCP/IP hasn't properly closed last time
+fopen(remote);
+tread_speed = initial_tread_speed;
+tm_set(remote, [tread_speed,tread_speed], [0.25,0.25]);
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+while tread_speed < 2
+    pause(4);
+    tread_speed = initial_tread_speed + 0.05;
+    tm_set(remote, [V_treadmill_target,V_treadmill_target], [0.25,0.25]);
+    disp(['Current treadmill speed is: ',num2str()])
+end
