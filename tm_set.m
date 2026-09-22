@@ -96,7 +96,7 @@ packet(3+16) = bitand(incline, 255);
 packet = uint8(packet);
 packet(2+18+[0:17]) = bitxor(packet(2+[0:17]), uint8(255));
 
-fwrite(obj, packet);
+write(obj, packet);
 end
 
 % This is free and unencumbered software released into the public domain.
