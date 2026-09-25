@@ -383,7 +383,7 @@ while i <= num_frames
     loop_success_count = loop_success_count + 1; %We reached this part of the code, increment the count
 
     %Check if the step is strange
-    if (step_flag) ~= 0 && (prev_valid_step ~= step_flag) && (t_lapsed_step>0.3) && (t_lapsed_step < 1) && (step_length>0.3)
+    if (step_flag) ~= 0 && (prev_valid_step ~= step_flag) && (t_lapsed_step>0.3) && (t_lapsed_step < 1.2) && (step_length>0.1 +step_length_adjustment)
         %So we didn't have someone stepping on the same belt with both legs
         step_ok = 1;
         prev_valid_step = step_flag; %If we accept a step, then this is the step that next step check needs to compare to
@@ -403,23 +403,23 @@ while i <= num_frames
         y_mea = [pos_mea;V_human_mea];
 
         %Check if the measurement makes no sense
-        if ((abs(pos_mea)<0.7) && (abs(V_human_mea)<1.5)) || ((i>10*fps)&&(abs(pos_mea)<0.7)&&(abs(V_human_mea)<0.8)) 
+        if ((abs(pos_mea)<0.8) && (abs(V_human_mea)<1.5)) || ((i>10*fps)&&(abs(pos_mea)<0.8)&&(abs(V_human_mea)<0.8)) 
             mea_ok = 1;
         else
             mea_ok = 0;
         end
 
         %And some sanity checks for measurements being ok
-        if step_length < 0.2 + step_length_adjustment  %So the original measured step length is <0.2 m
+        if step_length < 0.1 + step_length_adjustment  %So the original measured step length is <0.1 m
             mea_ok = 0;
         end
 
-        if step_length > 1 + step_length_adjustment  %If the original measured step length is >1...thats either a super tall person, or a fluke
+        if step_length > 1.2 + step_length_adjustment  %If the original measured step length is >1...thats either a super tall person, or a fluke
             mea_ok = 0;
         end
 
         %If the step happened extremely quickly or extremely slowly, discard it
-        if t_lapsed_step < 0.3 || t_lapsed_step > 1
+        if t_lapsed_step < 0.3 || t_lapsed_step > 1.2
             mea_ok = 0;
         end
         
