@@ -3,7 +3,7 @@
 % Original code github link: https://github.com/smsong/self-paced-treadmill/tree/JNER2020
 
 
-%pause(5) %For testing on myself
+pause(5) %For testing on myself
 
 %Note, the force plates are in their own reference frame, and the x-direction in lab frame is the y for treadmill
 %In this code, the naming of coordinates are those in the lab frame
@@ -14,11 +14,11 @@ error_max = 10; %Max amount of errors we allow before disconnecting. For now, pr
 Fz_thres = 100; %Increase this for now (2026 Feb) to deal with treadmill plate issues
 
 %Adjust these per participant:
-time = 370; % Total time of experiment, in seconds
+time = 100; % Total time of experiment, in seconds
 mass = 73; %In kg, including cosmed/exo/etc.
-V_treadmill_target = 1.35; %V_tm_tgt in paper, this sets the initial speed
+V_treadmill_target = 1.2; %V_tm_tgt in paper, this sets the initial speed
 steps_wait_time = 5; %How many qualified steps to wait before SPT engages
-%mass = 67;
+%mass = 64;
 
 send_to_exo = 0; %If flagged, we create also a UDP portal to send the treadmill speed commands to the exo
 
@@ -26,11 +26,10 @@ send_to_exo = 0; %If flagged, we create also a UDP portal to send the treadmill 
 G_p = 0.13;
 G_v = 0.15;
 pos_offset = -0.1; %Position offset of human on treadmill, empirically set at -0.1 which is about near the center of treadmill
-step_length_adjustment = 0.1; %Adjust this if needed, I set it at 0.25 normally - this is the "high" setting that sometimes treadmill just WANTS
-%step_length_adjustment = 0.05; %Adjust this if needed, I set it at 0.05 normally - this is the "low" setting that sometimes treadmill just WANTS
+step_length_adjustment = 0; %Adjust this if needed, I set it at 0.25 normally - this is the "high" setting that sometimes treadmill just WANTS
 del_t_target = 0.5; %How fast do we want the treadmill speed to achieve target? In seconds
-max_treadmill_V = 2.3;
-min_treadmill_V = 0.2;
+max_treadmill_V = 1.2;
+min_treadmill_V = 1.2;
 a_treadmill_target_min = 0.01;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -118,7 +117,6 @@ u_current_isnan_continue_count = 0; %Triggers if u_current is computed to be NaN
 
 %On top of tracking how many times "continue" loss triggered, let's also track how much actual loop time is gone due to continue, as this gives a better idea of whether or not we actually have problem
 t_total = 0;
-t_applied = 0;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -160,10 +158,11 @@ error_count = 0; %Track how many exceptions we run into
 dt = 0; %Initialize dt
 
 
-t_step = tic; %Initialize the step time
+label_last_step = NaN;   % QTM frame number of the last detected foot strike
 t_current_step = 0;
 i = 1;
 frame_init = 1;
+first_frame = 1; %Tracks whether we are in the 1st frame. If so, don't estimate dt from this frame.
 
 while i <= num_frames 
     %Note that with this code, I don't have a fixed dt. Instead, dt changes depending on how fast the code can run
@@ -174,67 +173,18 @@ while i <= num_frames
     t_frame_start = datetime; 
 
     %Update dt and the constants for Kalman filter
-    if KF_initialized
-        %Track dt, then re-initialize the timer
-        dt = toc(dt_start);
-        A = [1, dt;0,1];
-        B = [dt^2/2;dt];
-        noise_q2 = 2.9; % square of q: from experiment (mocap as reference data)
-        Q = B*B'*noise_q2;
-        dt_start = tic;
-        
-    else %We initialize the timer for dt and skip to the next loop
-        dt_start = tic;
+    if ~KF_initialized
         KF_initialized = 1;
-
         [Fx_frame, Fz_frame,My_frame,COP_x_frame,dataRT,frames,label] = get_frame_self_paced(QCM);
         if isnan(Fx_frame)
             Fx_frame = [0,0];
             COP_x_frame = [0;0];
         end
-
         X_current = [mean(COP_x_frame);0];
-        u_current = Fx_frame(1) + Fx_frame(2);
         P = P0;
-
-        KF_non_initialized_continue_count = KF_non_initialized_continue_count +1;
+        KF_non_initialized_continue_count = KF_non_initialized_continue_count + 1;
         continue;
     end
-
-    %%%%%%%%%%%Try updating estimation for current treadmill speed%%%%%%%%%%%%%%%%%%%%%%%%
-    % t_lapsed_treadmill = second(t_frame_start) - second(t_treadmill_prev_update);   
-    % if t_lapsed_treadmill <0 
-    %     t_lapsed_treadmill = 0;
-    % end
-
-    t_lapsed_treadmill = dt;
-    del_v = V_treadmill_target - V_treadmill;
-    %How much has the treadmill speed change since we last gave it a command?
-    if del_v > 0
-        del_v = min(del_v, a_treadmill_target*t_lapsed_treadmill);
-    else
-        del_v = max(del_v, -a_treadmill_target*t_lapsed_treadmill);
-    end
-    V_treadmill = V_treadmill + del_v;
-
-    %Because we are just guessing the speed, clip it in case something went wrong
-    if V_treadmill > max_treadmill_V
-        V_treadmill = max_treadmill_V;
-    end
-
-    if V_treadmill < min_treadmill_V
-        V_treadmill = min_treadmill_V;
-    end
-
-    %Debugging
-    if i >0
-        V_treadmill_inst_log(i) = V_treadmill;
-        t_lapsed_treadmill_log(i) = t_lapsed_treadmill;
-    end
-
-    %Track total time elapsed
-    t_total   = t_total   + dt;
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%%%%Try reading the data from QTM%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     try
@@ -254,7 +204,7 @@ while i <= num_frames
         [My_frame(1), My_initial_state(:,1)] = filter(filter_b, filter_a, My_frame(1), My_initial_state(:,1));
         [My_frame(2), My_initial_state(:,2)] = filter(filter_b, filter_a, My_frame(2), My_initial_state(:,2));
         
-        label = floor(label/force_per_frame);
+        label = floor(double(label)/force_per_frame);   % QCM returns an integer type; convert before dividing
         if i<0 || label <frame_init 
             %I.e. we failed to read initial frame
             %Not sure what causes the 2nd case, but I have this happen a few times..?
@@ -306,7 +256,6 @@ while i <= num_frames
         My(i,:) = My_frame;
         COP_x(i,:) = COP_x_frame;
         frame_elapsed_count(i) = frame_elapsed;
-        dt_log(i) = dt;
 
     catch
         warning('Error reading QTM package, trying again');
@@ -320,17 +269,46 @@ while i <= num_frames
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-    %%%%%%%%%%%%%%%%%Update the Kalman estimate%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    %Update the state predictions
+    %Update estimated current speed using measurements
     u_current = Fx_frame(1) + Fx_frame(2);
     u_current = u_current/mass; %The GRF values reported are in the lab reference frame, a positive X-force means acceleration
-    
+
     if isnan(u_current)
         u_current_isnan_continue_count = u_current_isnan_continue_count + 1;
         continue;
     end
+
+    %%%%% Update treadmill speed from time base from QTM frame numbers, not wall clock %%%%%%%%%%%%%%%
+    if frame_elapsed <= 0
+        continue;   % no new frame since last time
+    end
+    dt = frame_elapsed/fps;          % real elapsed time, however many polls returned NaN
+    if first_frame % don't count the frames QTM ran before MATLAB joined
+        dt = 1/fps;      
+        first_frame = 0;
+        t_run = tic; %Track total run time
+    end
+    A = [1, dt; 0, 1];
+    B = [dt^2/2; dt];
+    noise_q2 = 2.9;
+    Q = B*B'*noise_q2;
+
+    % Treadmill speed estimate, advanced by the same dt
+    del_v = V_treadmill_target - V_treadmill;
+    if del_v > 0
+        del_v = min(del_v,  a_treadmill_target*dt);
+    else
+        del_v = max(del_v, -a_treadmill_target*dt);
+    end
+    V_treadmill = min(max(V_treadmill + del_v, min_treadmill_V), max_treadmill_V);
+    V_treadmill_inst_log(i) = V_treadmill;
+    t_lapsed_treadmill_log(i) = dt;
+    dt_log(i) = dt;
+    t_total = t_total + dt;
+
+    %%%%%%%%%%%%%%%%%Update the Kalman estimate%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    %Update the state predictions
 
     %To troubleshoot any potential NaNs:
     X_prev = X_current;
@@ -353,8 +331,8 @@ while i <= num_frames
     step_flag = 0; 
 
     if i <3
-        i = i+1;
-        continue; %Don't do step computation at 1st frame and 2nd
+        i = i + frame_elapsed;
+        continue; %Don't do step computation at 1st frame
     end
 
     %Step on right belt?
@@ -390,8 +368,8 @@ while i <= num_frames
         step_length = pos_current_step - pos_prev_step;
         step_length = step_length + step_length_adjustment; %For some reason, our estimated step lengths using force plate COP is consistently smaller than what we expect
         step_length_test = pos_current_step_test - pos_prev_step_test;
-        t_lapsed_step = toc(t_step);
-        t_step = tic;
+        t_lapsed_step = (label - label_last_step)/fps;   % NaN on the first strike, so it gets rejected
+        label_last_step = label;
         step_count = step_count + 1;
         n_ts = 0; %Reset the time_since_step count
     end
@@ -403,7 +381,6 @@ while i <= num_frames
     pos_prev_step_test = pos_prev_step_test - dt*V_treadmill;
 
     loop_success_count = loop_success_count + 1; %We reached this part of the code, increment the count
-    t_applied = t_applied + dt; %How much "in loop" time we actually passed?
 
     %Check if the step is strange
     if (step_flag) ~= 0 && (prev_valid_step ~= step_flag) && (t_lapsed_step>0.3) && (t_lapsed_step < 1) && (step_length>0.3)
@@ -451,7 +428,7 @@ while i <= num_frames
             y_est = [pos_average; u_average]; 
             X_current = X_current + K*(y_mea - y_est);
 
-            %We should already update the pos_average and u_average here, as opposed to waiting until the begining of next loop
+            %We should already update the pos_average and u_average here, as opposed to waiting until the beginning of next loop
             %This way, the good measurement helps with state estimation immediately, and we can use mea_ok as a check for whether we should update treadmill speed
             %This is ok because at this point, n_ts = 0. So even if we set those two variables, they will be re-initialized to X_current at the beginining of next loop:
             pos_average = X_current(1);
@@ -546,6 +523,8 @@ clear remote % Disconnection for new tcpipclient is just this
 if send_to_exo
      clear udp_exo; %Clean up the UDP port if it has been created
 end
+
+disp(['Total run time is ', num2str(toc(t_run)), '. Total time calculated from t_total is ',num2str(t_total)])
 
 %Clean up the data but store them in separate variables, so original variables can be used to debug
 V_treadmill_average_log_cleared = V_treadmill_average_log(~isnan(V_treadmill_average_log));
