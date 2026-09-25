@@ -9,14 +9,14 @@ pause(5) %For testing on myself
 %In this code, the naming of coordinates are those in the lab frame
 
 %%%%%%%%%%%%%%Settings that change depending on experiment%%%%%%%%%%%%%%%%%
-error_max = 10; %Max amount of errors we allow before disconnecting. For now, pratically ignore all errors and go ahead
-%Fz_thres = 50; %Threshold for registering a step as foot strike. For nowc setting this as a static variable. 
+error_max = 10; %Max amount of errors we allow before disconnecting. For now, practically ignore all errors and go ahead
+%Fz_thres = 50; %Threshold for registering a step as foot strike. For now setting this as a static variable. 
 Fz_thres = 100; %Increase this for now (2026 Feb) to deal with treadmill plate issues
 
 %Adjust these per participant:
-time = 100; % Total time of experiment, in seconds
-mass = 73; %In kg, including cosmed/exo/etc.
-V_treadmill_target = 1.2; %V_tm_tgt in paper, this sets the initial speed
+time = 370; % Total time of experiment, in seconds
+mass = 65; %In kg, including cosmed/exo/etc.
+V_treadmill_target = 1.3; %V_tm_tgt in paper, this sets the initial speed
 steps_wait_time = 5; %How many qualified steps to wait before SPT engages
 %mass = 64;
 
@@ -28,8 +28,8 @@ G_v = 0.15;
 pos_offset = -0.1; %Position offset of human on treadmill, empirically set at -0.1 which is about near the center of treadmill
 step_length_adjustment = 0; %Adjust this if needed, I set it at 0.25 normally - this is the "high" setting that sometimes treadmill just WANTS
 del_t_target = 0.5; %How fast do we want the treadmill speed to achieve target? In seconds
-max_treadmill_V = 1.2;
-min_treadmill_V = 1.2;
+max_treadmill_V = 2.3;
+min_treadmill_V = 0.2;
 a_treadmill_target_min = 0.01;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -506,7 +506,7 @@ while i <= num_frames
     %Log the data, display them as needed
     if step_ok && mea_ok
         disp(['Frame ', num2str(i)]); %This shows the actual amount of frames we captured 
-        disp(['Current estimated human position is ',num2str(X_current(1)), ' with speed ', num2str(X_current(2))])
+        disp(['Current estimated human position is ',num2str(pos_average), ' with speed ', num2str(u_average)])
         disp(['Treadmill speed before update is: ',num2str(V_treadmill)])
         disp(['Computed del_v_target is: ', num2str(del_v_target)]);
         disp(['Sending speed command: ',num2str(V_treadmill_target)]);
