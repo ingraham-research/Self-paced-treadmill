@@ -426,13 +426,14 @@ while i <= num_frames
         if mea_ok
             %Update state with measurement:
             y_est = [pos_average; u_average]; 
-            X_current = X_current + K*(y_mea - y_est);
+            correction = K*(y_mea - y_est); 
+            X_current = X_current + correction;            
 
             %We should already update the pos_average and u_average here, as opposed to waiting until the beginning of next loop
             %This way, the good measurement helps with state estimation immediately, and we can use mea_ok as a check for whether we should update treadmill speed
             %This is ok because at this point, n_ts = 0. So even if we set those two variables, they will be re-initialized to X_current at the beginining of next loop:
-            pos_average = X_current(1);
-            u_average = X_current(2);
+            pos_average = y_est(1) + correction(1); 
+            u_average = y_est(2) + correction(2); 
 
             if isnan(X_current)
                 disp(['Warning, NaN encountered. The previous value that wasnt Nan is: ',num2str(y_est)]);
