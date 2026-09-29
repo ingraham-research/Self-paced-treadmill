@@ -1,9 +1,9 @@
 %This code is based on, and modified from the following paper:
-% S Song, H Choi and SH Collins, Using force data to self-pace an instrumentedtreadmill and measure self-selected walking speed
+% S Song, H Choi and SH Collins, Using force data to self-pace an instrumented treadmill and measure self-selected walking speed
 % Original code github link: https://github.com/smsong/self-paced-treadmill/tree/JNER2020
 
 
-pause(5) %For testing on myself
+%pause(5) %For testing on myself
 
 %Note, the force plates are in their own reference frame, and the x-direction in lab frame is the y for treadmill
 %In this code, the naming of coordinates are those in the lab frame
@@ -14,13 +14,13 @@ error_max = 10; %Max amount of errors we allow before disconnecting. For now, pr
 Fz_thres = 100; %Increase this for now (2026 Feb) to deal with treadmill plate issues
 
 %Adjust these per participant:
-time = 370; % Total time of experiment, in seconds
+time = 2400; % Total time of experiment, in seconds
 mass = 65; %In kg, including cosmed/exo/etc.
-V_treadmill_target = 1.3; %V_tm_tgt in paper, this sets the initial speed
-steps_wait_time = 5; %How many qualified steps to wait before SPT engages
+V_treadmill_target = 1.1; %V_tm_tgt in paper, this sets the initial speed
+steps_wait_time = 15; %How many qualified steps to wait before SPT engages
 %mass = 64;
 
-send_to_exo = 0; %If flagged, we create also a UDP portal to send the treadmill speed commands to the exo
+send_to_exo = 1; %If flagged, we create also a UDP portal to send the treadmill speed commands to the exo
 
 %Parameters for the controller for treadmill feedback
 G_p = 0.13;
