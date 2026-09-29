@@ -3,7 +3,7 @@
 % Original code github link: https://github.com/smsong/self-paced-treadmill/tree/JNER2020
 
 
-pause(5) %For testing on myself
+%pause(5) %For testing on myself
 
 %Note, the force plates are in their own reference frame, and the x-direction in lab frame is the y for treadmill
 %In this code, the naming of coordinates are those in the lab frame
@@ -14,13 +14,13 @@ error_max = 10; %Max amount of errors we allow before disconnecting. For now, pr
 Fz_thres = 100; %Increase this for now (2026 Feb) to deal with treadmill plate issues
 
 %Adjust these per participant:
-time = 370; % Total time of experiment, in seconds
+time = 2400; % Total time of experiment, in seconds
 mass = 65; %In kg, including cosmed/exo/etc.
-V_treadmill_target = 1.3; %V_tm_tgt in paper, this sets the initial speed
-steps_wait_time = 5; %How many qualified steps to wait before SPT engages
+V_treadmill_target = 1.1; %V_tm_tgt in paper, this sets the initial speed
+steps_wait_time = 15; %How many qualified steps to wait before SPT engages
 %mass = 64;
 
-send_to_exo = 0; %If flagged, we create also a UDP portal to send the treadmill speed commands to the exo
+send_to_exo = 1; %If flagged, we create also a UDP portal to send the treadmill speed commands to the exo
 
 %Parameters for the controller for treadmill feedback
 G_p = 0.13;
@@ -140,14 +140,13 @@ dt_log = nan(num_frames,1);
 
 %%%%%Remote connection to Bertec Treadmill control panel%%%%%%%%%%%
 % Open the connection (do it only once at start of the control session)
-%First clear off any potentially leftover TCPIP clients
-if exist('remote','var')
-    clear remote;
-end
-remote = tcpclient('localhost', 4000);
+remote = tcpip('localhost', 4000);
+fclose(remote); %In case TCP/IP hasn't properly closed last time
+fopen(remote);
 tm_set(remote, [V_treadmill_target,V_treadmill_target], [a_treadmill_target,a_treadmill_target]);
 t_treadmill_prev_update = datetime;
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 if send_to_exo
     udp_exo = udpport("byte"); %Add a udp port to talk to the exoskeleton. Change the port if needed, but we should probably leave it at 5004
     exo_port = 5004;
@@ -520,7 +519,7 @@ end
 %Disconnect from QTM and treadmill
 QCM('disconnect');
 tm_set(remote, [0,0], [0.4,0.4]);
-clear remote % Disconnection for new tcpipclient is just this
+fclose(remote);
 if send_to_exo
      clear udp_exo; %Clean up the UDP port if it has been created
 end
