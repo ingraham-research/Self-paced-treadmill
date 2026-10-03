@@ -12,12 +12,13 @@
 error_max = 10; %Max amount of errors we allow before disconnecting. For now, practically ignore all errors and go ahead
 %Fz_thres = 50; %Threshold for registering a step as foot strike. For now setting this as a static variable. 
 Fz_thres = 100; %Increase this for now (2026 Feb) to deal with treadmill plate issues
+hip_exo = 1; %If 0, we are using ankle exo instead. This matters for the "exo_IP"
 
 %Adjust these per participant:
 time = 2400; % Total time of experiment, in seconds
 mass = 65; %In kg, including cosmed/exo/etc.
 V_treadmill_target = 1.1; %V_tm_tgt in paper, this sets the initial speed
-steps_wait_time = 15; %How many qualified steps to wait before SPT engages
+steps_wait_time = 5; %How many qualified steps to wait before SPT engages
 %mass = 64;
 
 send_to_exo = 1; %If flagged, we create also a UDP portal to send the treadmill speed commands to the exo
@@ -39,7 +40,11 @@ force_per_frame = 10;
 num_frames = fps*time;
 num_forces = num_frames*force_per_frame;
 ip = '127.0.0.1:22222';
-exo_ip = "10.18.54.152";
+if hip_exo
+    exo_ip = "10.18.54.152";
+else
+    exo_ip = "127.0.0.1";
+end
 
 
 Fx = zeros(num_frames,2); 
